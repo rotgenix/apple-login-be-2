@@ -14,7 +14,6 @@ const crypto = require("crypto");
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors());
 
@@ -26,14 +25,12 @@ const {
     APPLE_PRIVATE_KEY,
     APPLE_WEB_CLIENT_ID,
     WEB_PUBLIC_ORIGIN,
-    BACKEND_PUBLIC_ORIGIN,
 } = require("./config.js");
 
 if (!APP_JWT_SECRET) throw new Error("Missing APP_JWT_SECRET");
 if (!APPLE_TEAM_ID || !APPLE_KEY_ID || !APPLE_PRIVATE_KEY) throw new Error("Missing Apple key env");
 if (!APPLE_WEB_CLIENT_ID) throw new Error("Missing APPLE_WEB_CLIENT_ID (Services ID)");
 if (!WEB_PUBLIC_ORIGIN) throw new Error("Missing WEB_PUBLIC_ORIGIN");
-if (!BACKEND_PUBLIC_ORIGIN) throw new Error("Missing BACKEND_PUBLIC_ORIGIN");
 
 // --- Apple JWKS (verify id_token) ---
 const appleJwks = jwksClient({
@@ -135,14 +132,14 @@ app.get("/auth/apple/start", (req, res) => {
             maxAge: 10 * 60 * 1000, // 10 minutes
         });
 
-        // For response_mode=form_post, Apple posts to the backend callback.
-        const redirectUri = `${BACKEND_PUBLIC_ORIGIN}/auth/apple/callback`;
+        const redirectUri = `${WEB_PUBLIC_ORIGIN}/auth/apple/callback`;
         console.log("redirectUri:", redirectUri);
 
         const authorizeUrl =
             "https://appleid.apple.com/auth/authorize?" +
             new URLSearchParams({
                 response_type: "code",
+                // response_mode: "query",
                 response_mode: "form_post",
                 client_id: APPLE_WEB_CLIENT_ID,   // Services ID
                 redirect_uri: redirectUri,
@@ -206,26 +203,6 @@ app.post("/auth/apple/complete", async (req, res) => {
             err?.message ||
             "Apple auth failed";
         res.status(401).json({ message: msg, err });
-    }
-});
-
-/**
- * STEP B1 (form_post): Apple POSTs code+state to backend.
- * We redirect to the frontend callback with query params.
- */
-app.post("/auth/apple/callback", (req, res) => {
-    try {
-        console.log("/auth/apple/callback");
-        const { code, state } = req.body;
-        if (!code || !state) {
-            return res.status(400).send("Missing code/state from Apple");
-        }
-        const redirectTo = `${WEB_PUBLIC_ORIGIN}/auth/apple/callback?` +
-            new URLSearchParams({ code, state }).toString();
-        return res.redirect(redirectTo);
-    } catch (err) {
-        console.log("callback err:", err);
-        return res.status(500).send("Callback error");
     }
 });
 
