@@ -16,7 +16,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(cors());
+app.use(
+    cors({
+        origin: "*",
+        credentials: false,
+        methods: ["GET", "POST", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
+);
 
 const {
     PORT = 4000,
@@ -125,15 +132,8 @@ app.get("/", (req, res) => {
 app.get("/auth/apple/start", (req, res) => {
     try {
         console.log("/auth/apple/start");
-        const state = crypto.randomBytes(16).toString("hex");
-
-        // Store state in httpOnly cookie (same origin because you call via /api proxy)
-        res.cookie("apple_oauth_state", state, {
-            httpOnly: true,
-            secure: true,    // ngrok is https, keep true
-            sameSite: "lax",
-            maxAge: 10 * 60 * 1000, // 10 minutes
-        });
+        const nonce = crypto.randomBytes(16).toString("hex");
+        const state = jwt.sign({ nonce }, APP_JWT_SECRET, { expiresIn: "10m" });
 
         // For response_mode=form_post, Apple posts to the backend callback.
         const redirectUri = `${BACKEND_PUBLIC_ORIGIN}/auth/apple/callback`;
@@ -150,8 +150,8 @@ app.get("/auth/apple/start", (req, res) => {
                 state,
             }).toString();
         console.log("authorizeUrl:", authorizeUrl);
-        // Redirect user to Apple UI
-        res.redirect(authorizeUrl);
+        // Return URL + state so frontend can store state and redirect
+        res.json({ authorizeUrl, state });
     } catch (error) {
         console.log(error);
     }
@@ -167,13 +167,11 @@ app.post("/auth/apple/complete", async (req, res) => {
         if (!code) return res.status(400).json({ message: "code is required" });
         if (!state) return res.status(400).json({ message: "state is required" });
 
-        const expectedState = req.cookies.apple_oauth_state;
-        if (!expectedState || expectedState !== state) {
+        try {
+            jwt.verify(state, APP_JWT_SECRET);
+        } catch (e) {
             return res.status(401).json({ message: "Invalid state (CSRF check failed)" });
         }
-
-        // one-time use: clear state cookie
-        res.clearCookie("apple_oauth_state");
 
         // Exchange code at Apple token endpoint
         const tokenData = await exchangeCodeForTokens({ code, clientId: APPLE_WEB_CLIENT_ID });
@@ -188,16 +186,8 @@ app.post("/auth/apple/complete", async (req, res) => {
         const user = await upsertUser({ appleSub, email });
 
         const { accessToken, refreshToken } = issueAppTokens(user);
-
-        // For web: best is refresh token in httpOnly cookie
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            maxAge: 30 * 24 * 60 * 60 * 1000,
-        });
-
-        res.json({ user, accessToken });
+        // With allow-all-origins, cookies won't work cross-origin.
+        res.json({ user, accessToken, refreshToken });
     } catch (err) {
         console.log("err:", err);
         const msg =
