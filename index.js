@@ -111,32 +111,36 @@ function issueAppTokens(user) {
  * Frontend will just redirect user to /api/auth/apple/start
  */
 app.get("/auth/apple/start", (req, res) => {
-    const state = crypto.randomBytes(16).toString("hex");
+    try {
+        const state = crypto.randomBytes(16).toString("hex");
 
-    // Store state in httpOnly cookie (same origin because you call via /api proxy)
-    res.cookie("apple_oauth_state", state, {
-        httpOnly: true,
-        secure: true,    // ngrok is https, keep true
-        sameSite: "lax",
-        maxAge: 10 * 60 * 1000, // 10 minutes
-    });
+        // Store state in httpOnly cookie (same origin because you call via /api proxy)
+        res.cookie("apple_oauth_state", state, {
+            httpOnly: true,
+            secure: true,    // ngrok is https, keep true
+            sameSite: "lax",
+            maxAge: 10 * 60 * 1000, // 10 minutes
+        });
 
-    const redirectUri = `${WEB_PUBLIC_ORIGIN}/auth/apple/callback`;
+        const redirectUri = `${WEB_PUBLIC_ORIGIN}/auth/apple/callback`;
 
-    const authorizeUrl =
-        "https://appleid.apple.com/auth/authorize?" +
-        new URLSearchParams({
-            response_type: "code",
-            // response_mode: "query",
-            response_mode: "form_post",
-            client_id: APPLE_WEB_CLIENT_ID,   // Services ID
-            redirect_uri: redirectUri,
-            scope: "name email",
-            state,
-        }).toString();
+        const authorizeUrl =
+            "https://appleid.apple.com/auth/authorize?" +
+            new URLSearchParams({
+                response_type: "code",
+                // response_mode: "query",
+                response_mode: "form_post",
+                client_id: APPLE_WEB_CLIENT_ID,   // Services ID
+                redirect_uri: redirectUri,
+                scope: "name email",
+                state,
+            }).toString();
 
-    // Redirect user to Apple UI
-    res.redirect(authorizeUrl);
+        // Redirect user to Apple UI
+        res.redirect(authorizeUrl);
+    } catch (error) {
+        console.log(error);
+    }
 });
 
 /**
@@ -181,12 +185,13 @@ app.post("/auth/apple/complete", async (req, res) => {
 
         res.json({ user, accessToken });
     } catch (err) {
+        console.log("err:", err);
         const msg =
             err?.response?.data?.error_description ||
             err?.response?.data?.error ||
             err?.message ||
             "Apple auth failed";
-        res.status(401).json({ message: msg });
+        res.status(401).json({ message: msg, err });
     }
 });
 
