@@ -206,4 +206,18 @@ app.post("/auth/apple/complete", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`));
+const now = new Date();
+const fmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+});
+console.log(fmt.format(now)); // e.g., "Feb 10, Tuesday, 2:20 PM"
+
+app.listen(PORT, () => {
+    console.log(fmt.format(now)); //
+    console.log(`Backend running on http://localhost:${PORT}`);
+});
