@@ -9,12 +9,13 @@ const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const jwksClient = require("jwks-rsa");
 const cookieParser = require("cookie-parser");
-// const cors = require("cors");
+const cors = require("cors");
 const crypto = require("crypto");
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors());
 
 const {
     PORT = 4000,
