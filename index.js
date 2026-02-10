@@ -112,6 +112,7 @@ function issueAppTokens(user) {
  */
 app.get("/auth/apple/start", (req, res) => {
     try {
+        console.log("/auth/apple/start");
         const state = crypto.randomBytes(16).toString("hex");
 
         // Store state in httpOnly cookie (same origin because you call via /api proxy)
@@ -123,6 +124,7 @@ app.get("/auth/apple/start", (req, res) => {
         });
 
         const redirectUri = `${WEB_PUBLIC_ORIGIN}/auth/apple/callback`;
+        console.log("redirectUri:", redirectUri);
 
         const authorizeUrl =
             "https://appleid.apple.com/auth/authorize?" +
@@ -135,7 +137,7 @@ app.get("/auth/apple/start", (req, res) => {
                 scope: "name email",
                 state,
             }).toString();
-
+        console.log("authorizeUrl:", authorizeUrl);
         // Redirect user to Apple UI
         res.redirect(authorizeUrl);
     } catch (error) {
