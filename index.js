@@ -106,6 +106,14 @@ function issueAppTokens(user) {
     return { accessToken, refreshToken };
 }
 
+// 
+
+app.get("/", (req, res) => {
+    return res.json({
+        success: true,
+        message: "Server is live",
+    })
+})
 /**
  * STEP A: Start login (backend creates Apple authorize URL)
  * Frontend will just redirect user to /api/auth/apple/start
