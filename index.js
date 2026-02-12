@@ -161,7 +161,9 @@ app.get("/api/apple/auth/web", (req, res) => {
  * STEP B: Complete login (frontend callback page sends code+state here)
  * Backend exchanges code -> verifies id_token -> creates session.
  */
-app.post("/auth/apple/complete", async (req, res) => {
+
+// pi/apple/auth/web/complete
+app.post("/api/apple/auth/web/complete", async (req, res) => {
     try {
         const { code, state } = req.body;
         if (!code) return res.status(400).json({ message: "code is required" });
