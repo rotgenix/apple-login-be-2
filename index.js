@@ -129,7 +129,7 @@ app.get("/", (req, res) => {
  * STEP A: Start login (backend creates Apple authorize URL)
  * Frontend will just redirect user to /api/auth/apple/start
  */
-app.get("/auth/apple/start", (req, res) => {
+app.get("/api/apple/auth/web", (req, res) => {
     try {
         console.log("/auth/apple/start");
         const nonce = crypto.randomBytes(16).toString("hex");
